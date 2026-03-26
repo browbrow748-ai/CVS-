@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CVS Schedule</title>
+
+<style>
+body { font-family: Arial; background:white; }
+
+.header { text-align:center; margin-bottom:10px; }
+.header h2 { margin:2px; font-size:16px; }
+.header small { font-size:12px; }
+
+table { border-collapse: collapse; width:100%; font-size:11px; }
+td, th { border:1px solid black; padding:4px; text-align:center; }
+
+.name { text-align:left; font-weight:bold; width:140px; }
+.total { font-weight:bold; background:#eee; }
+
+input { width:90px; border:none; text-align:center; }
+select { border:none; }
+
+.cell { display:flex; flex-direction:column; }
+
+.duration { font-size:10px; }
+
+.rx { background:#ffcccc; }
+
+#topBar {
+position:fixed;
+top:10px;
+right:10px;
+}
+
+#printStatus { display:none; font-weight:bold; }
+
+@media print {
+button, select { display:none; }
+input { border:none; }
+#topBar { display:none; }
+#printStatus { display:block; }
+#statusSelect { display:none; }
+}
+</style>
+</head>
+
+<body>
+
+<div id="topBar">
+<button onclick="window.print()">🖨️ Print</button>
+</div>
+
+<div class="header">
+<h2>Weekly Store Schedule</h2>
+<small>Store #9592 — CVS Pharmacy Arroyo Grande, CA</small><br>
+
+<small>
+Status:
+<select id="statusSelect" onchange="updateStatus()">
+<option>Unpublished</option>
+<option>Published</option>
+</select>
+<span id="printStatus">Unpublished</span>
+</small>
+<br>
+
+<small>Week Ending: <input id="weekEnding" placeholder="MM/DD/YYYY"></small>
+</div>
+
+<table id="schedule"></table>
+
+<script>
+const employees = [
+"Casey, Brian",
+"Trumbly, Tyler",
+"Lobatos, Diego",
+"Pimentel, Blake",
+"Pimentel, Nicholas",
+"Prazanowski, Keira",
+"Salas, Berlynn",
+"Sayaphone, Kelly",
+"Christopher Gomez",
+"Kayle Herrera"
+];
+
+const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+const table = document.getElementById("schedule");
+
+// Header
+let header = "<tr><th class='name'>Employee</th>";
+days.forEach(d => header += `<th>${d}</th>`);
+header += "<th>Total</th></tr>";
+table.innerHTML += header;
+
+// Date row
+let dateRow = "<tr><td class='name'>Date</td>";
+days.forEach(() => dateRow += `<td><input placeholder="MM/DD"></td>`);
+dateRow += "<td></td></tr>";
+table.innerHTML += dateRow;
+
+// Rows
+employees.forEach((emp,i)=>{
+let row = `<tr><td class="name">${emp}</td>`;
+
+days.forEach((d,j)=>{
+row += `<td id="cell-${i}-${j}">
+<div class="cell">
+<div class="duration" id="dur-${i}-${j}">Duration: 0</div>
+<input id="shift-${i}-${j}" placeholder="7:30-3:30" oninput="updateAll()">
+<select id="type-${i}-${j}" onchange="updateAll()">
+<option value="FS">FS</option>
+<option value="RX">RX</option>
+</select>
+</div>
+</td>`;
+});
+
+row += `<td class="total" id="total-${i}">0</td></tr>`;
+table.innerHTML += row;
+});
+
+// totals row
+let totalRow = "<tr class='total'><td class='name'>Daily Total</td>";
+days.forEach((d,j)=> totalRow += `<td id="dayTotal-${j}">0</td>`);
+totalRow += "<td id='weekTotal'>0</td></tr>";
+table.innerHTML += totalRow;
+
+// status update
+function updateStatus(){
+let val = document.getElementById("statusSelect").value;
+document.getElementById("printStatus").innerText = val;
+}
+
+// time calc
+function getHours(shift){
+if(!shift.includes("-")) return 0;
+
+let [start,end] = shift.split("-");
+
+function toMin(t){
+let p=t.split(":");
+let h=parseInt(p[0]);
+let m=p[1]?parseInt(p[1]):0;
+return h*60+m;
+}
+
+let s=toMin(start);
+let e=toMin(end);
+
+if(e<=s) e+=12*60;
+
+return (e-s)/60;
+}
+
+// update everything
+function updateAll(){
+let dailyTotals = new Array(days.length).fill(0);
+let weekTotal = 0;
+
+for(let i=0;i<employees.length;i++){
+let total=0;
+
+for(let j=0;j<days.length;j++){
+let val=document.getElementById(`shift-${i}-${j}`).value;
+let type=document.getElementById(`type-${i}-${j}`).value;
+let hrs=getHours(val);
+
+total+=hrs;
+dailyTotals[j]+=hrs;
+
+document.getElementById(`dur-${i}-${j}`).innerText =
+hrs>0 ? "Duration: "+hrs.toFixed(2) : "Duration: 0";
+
+let cell=document.getElementById(`cell-${i}-${j}`);
+if(type==="RX"){
+cell.classList.add("rx");
+}else{
+cell.classList.remove("rx");
+}
+}
+
+document.getElementById(`total-${i}`).innerText=total.toFixed(2);
+weekTotal+=total;
+}
+
+for(let j=0;j<days.length;j++){
+document.getElementById(`dayTotal-${j}`).innerText = dailyTotals[j].toFixed(2);
+}
+document.getElementById("weekTotal").innerText = weekTotal.toFixed(2);
+}
+
+// initialize
+updateStatus();
+</script>
+
+</body>
+</html>
